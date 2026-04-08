@@ -1,6 +1,6 @@
 # 📦 MongoDB CRUD & Aggregation Cheat Sheet
 
-![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=for-the-badge\&logo=mongodb)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=for-the-badge&logo=mongodb)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 A quick and practical reference for **MongoDB CRUD operations, queries, indexing, and aggregation pipelines**.
@@ -24,9 +24,11 @@ A quick and practical reference for **MongoDB CRUD operations, queries, indexing
 use PMSD;
 db.createCollection("product");
 
+// Note: the database may not appear in `show dbs` until data is written.
 show dbs;
 show collections;
 
+// Cleanup commands (use carefully)
 db.product.drop();
 db.dropDatabase();
 ```
@@ -90,7 +92,12 @@ db.product.find({ "cost.price": { $gt: 600 } });
 db.product.find({ "items.delivery_days": { $lt: 5 } });
 
 db.product.find({ year: { $in: [2022, 2023] } });
+
+// Shell regex literal form
 db.product.find({ order_id: { $regex: /^o/ } });
+
+// Driver-friendly string form
+db.product.find({ order_id: { $regex: "^o" } });
 ```
 
 </details>
@@ -126,8 +133,9 @@ db.product.find(
 <summary>Update Operations</summary>
 
 ```js
+// Uses o1 so it matches the sample inserted above.
 db.product.updateOne(
-  { order_id: "o2" },
+  { order_id: "o1" },
   { $set: { "items.$[].delivery_days": 3 } }
 );
 ```
@@ -163,6 +171,7 @@ db.product.deleteOne({ order_id: "o1" });
 
 db.product.deleteMany({ year: { $lt: 2020 } });
 
+// Remove all documents from the collection
 db.product.deleteMany({});
 ```
 
@@ -210,15 +219,18 @@ db.product.aggregate([
 </details>
 
 <details>
-<summary>Revenue for 2023</summary>
+<summary>Revenue for 2023 (Quantity-Aware)</summary>
 
 ```js
 db.product.aggregate([
   { $match: { year: 2023 } },
+  { $unwind: "$items" },
   {
     $group: {
       _id: null,
-      totalRevenue: { $sum: "$cost.price" }
+      totalRevenue: {
+        $sum: { $multiply: ["$cost.price", "$items.quantity"] }
+      }
     }
   }
 ]);
